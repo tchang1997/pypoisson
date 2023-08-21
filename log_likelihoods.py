@@ -2,7 +2,7 @@ import numpy as np
 
 from utils import double_poisson_pmf
 
-def poisson(params, x, y):
+def poisson(params, x, y, weights=None):
     """
         Returns the negative log-likelihood (under a univariate Poisson distribution) of 
         observations y given parameters `params` and `x`.
@@ -16,7 +16,15 @@ def poisson(params, x, y):
 
     """
     loglambda_ = x.dot(params)
-    return -(y * loglambda_ - np.exp(loglambda_)).sum() / len(x)
+    if weights is None:
+        return -(y * loglambda_ - np.exp(loglambda_)).sum() / len(x)
+    else:
+        """
+            M-step for diagonal-inflated bivariate Poisson regression requires a reweighted Poisson regression,
+            weighted by essentially an estimate P(draw) or P(y_0 == y_1)
+        """
+        assert len(weights) == len(y)
+        return -(weights * (y * loglambda_ - np.exp(loglambda_))).sum() / len(x)
 
 def double_poisson(params, x, y0, y1, learned_covariance=True):
     lambda_ = np.exp(x.dot(params))

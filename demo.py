@@ -22,7 +22,7 @@ def demo_univariate_poisson():
 def demo_double_poisson():
     # WARNING: Convergence is finicky for len(x) < 1000
     np.random.seed(42)
-    x = np.random.randn(1000, 5) 
+    x = np.random.randn(5000, 5) 
     betas = np.stack([(np.arange(5) - 3) / 10, (np.arange(5) - 2) / 10, (np.arange(5) - 1) / 10], axis=1) # shape: (5, 3)
     y = np.random.poisson(np.exp(x.dot(betas))) # shape: (100, 3)
     betas_hat = double_poisson_regression(x, y[:, 0] + y[:, 2], y[:, 1] + y[:, 2], init_guess=np.random.randn(*betas.shape))
@@ -33,7 +33,7 @@ def demo_double_poisson():
 def demo_inflated_double_poisson():
     # WARNING: Convergence is finicky for len(x) < 1000
     np.random.seed(42)
-    x = np.random.randn(1000, 5) 
+    x = np.random.randn(5000, 5) 
     betas = np.stack([(np.arange(5) - 3) / 10, (np.arange(5) - 2) / 10, (np.arange(5) - 1) / 10], axis=1) # shape: (5, 3)
     theta = [0.6, 0.2, 0.1, 0.05, 0.05]
     p = 0.3

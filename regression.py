@@ -5,11 +5,11 @@ from tqdm.auto import tqdm
 from log_likelihoods import poisson, double_poisson, inflated_double_poisson
 from utils import double_poisson_pmf
 
-def poisson_regression(x, y, init_guess=None, optim_method="L-BFGS-B", options={'gtol': 1e-3}):
+def poisson_regression(x, y, weights=None, init_guess=None, optim_method="L-BFGS-B", options={'gtol': 1e-3}):
     assert x.ndim == 2, "`x` must be two-dimensional."
     if init_guess is None:
         init_guess = np.ones(x.shape[-1])
-    result = minimize(poisson, init_guess, args=(x, y), method=optim_method, options=options)
+    result = minimize(poisson, init_guess, args=(x, y, weights), method=optim_method, options=options)
     if not result.success:
         raise RuntimeError(f"Regression unsuccessful: {result.status}, ({result.message})")
     solution = result.x
@@ -39,7 +39,7 @@ def double_poisson_regression(x, y0, y1, n_iterations=2000, init_guess=None, war
     prev_nll = float('inf')
     for i in tqdm(range(n_iterations)):
         # E-step
-        if diagonal_pmf is not None:
+        if diagonal_pmf is None:
             nll = double_poisson(beta, x, y0, y1)
         else:
             nll = inflated_double_poisson(beta, x, y0, y1, p, diagonal_pmf)
@@ -62,10 +62,11 @@ def double_poisson_regression(x, y0, y1, n_iterations=2000, init_guess=None, war
             # get inflation factors as well
 
         # M-step
-        # use old betas to guess 
-        beta_0 = poisson_regression(x, y0 - latent_z, init_guess=beta[:, 0] if warm_mstep else np.random.randn(*beta[:, 0].shape)) 
-        beta_1 = poisson_regression(x, y1 - latent_z, init_guess=beta[:, 1] if warm_mstep else np.random.randn(*beta[:, 1].shape)) 
-        beta_2 = poisson_regression(x, latent_z, init_guess=beta[:, 2] if warm_mstep else np.random.randn(*beta[:, 2].shape))
+        # use old betas to guess
+        # if diagonal-inflated, 
+        beta_0 = poisson_regression(x, y0 - latent_z, weights=(1 - latent_v) if diagonal_pmf else None, init_guess=beta[:, 0] if warm_mstep else np.random.randn(*beta[:, 0].shape)) 
+        beta_1 = poisson_regression(x, y1 - latent_z, weights=(1 - latent_v) if diagonal_pmf else None, init_guess=beta[:, 1] if warm_mstep else np.random.randn(*beta[:, 1].shape)) 
+        beta_2 = poisson_regression(x, latent_z, weights=(1 - latent_v) if diagonal_pmf else None, init_guess=beta[:, 2] if warm_mstep else np.random.randn(*beta[:, 2].shape))
         beta = np.stack([beta_0, beta_1, beta_2], axis=1)
         if diagonal_pmf:
             p = latent_v.mean()
